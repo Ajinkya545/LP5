@@ -1,0 +1,66 @@
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <omp.h>
+
+using namespace std;
+
+// Function to perform parallel DFS
+void parallelDFS(vector<vector<int>>& graph, int start) {
+    int num_vertices = graph.size();
+    vector<bool> visited(num_vertices, false);
+    stack<int> s;
+
+    s.push(start);
+
+    cout << "DFS traversal: "; // Print the DFS traversal sequence
+
+    #pragma omp parallel
+    {
+        while (!s.empty()) {
+            int current;
+            #pragma omp critical
+            {
+                current = s.top();
+                s.pop();
+            }
+
+            if (!visited[current]) {
+                #pragma omp critical
+                {
+                    visited[current] = true;
+                }
+
+                cout << current << " "; // Print the visited node
+
+                #pragma omp for nowait
+                for (int i = 0; i < num_vertices; ++i) {
+                    if (graph[current][i] && !visited[i]) {
+                        #pragma omp critical
+                        {
+                            s.push(i);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    cout << endl;
+}
+
+int main() {
+    vector<vector<int>> graph = {
+        {0, 1, 1, 0, 0},
+        {1, 0, 0, 1, 1},
+        {1, 0, 0, 0, 1},
+        {0, 1, 0, 0, 0},
+        {0, 1, 1, 0, 0}
+    };
+
+    int start_node = 0;
+
+    parallelDFS(graph, start_node);
+
+    return 0;
+}
